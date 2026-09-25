@@ -1,0 +1,773 @@
+<title>NBA Game Predictor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f3f4f7; --surface:#fcfcfd; --surface-2:#eef0f4;
+  --ink:#0e1320; --ink-2:#4a5163; --muted:#80879a;
+  --grid:#e3e5ea; --axis:#c5c9d2; --ring:rgba(14,19,32,.10);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --base:#a9aeb9;
+  --good:#0ca30c; --good-text:#006300; --bad:#d03b3b; --bad-text:#b42a2a;
+  --wash:rgba(42,120,214,.08);
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0c0e13; --surface:#151921; --surface-2:#1c212b;
+    --ink:#f2f4f8; --ink-2:#c0c5d0; --muted:#8a90a0;
+    --grid:#252a34; --axis:#3a4050; --ring:rgba(255,255,255,.10);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --base:#5d6371;
+    --good:#0ca30c; --good-text:#4cc94c; --bad:#e66767; --bad-text:#f08585;
+    --wash:rgba(57,135,229,.14);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0c0e13; --surface:#151921; --surface-2:#1c212b;
+  --ink:#f2f4f8; --ink-2:#c0c5d0; --muted:#8a90a0;
+  --grid:#252a34; --axis:#3a4050; --ring:rgba(255,255,255,.10);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --base:#5d6371;
+  --good:#0ca30c; --good-text:#4cc94c; --bad:#e66767; --bad-text:#f08585;
+  --wash:rgba(57,135,229,.14);
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;padding:0 16px}
+.wrap{max-width:1120px;margin:0 auto;padding-block:40px 64px;display:flex;flex-direction:column;gap:40px}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;letter-spacing:.01em;text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:clamp(40px,6vw,64px);font-weight:700}
+h2{font-size:30px}
+h3{font-size:20px;font-weight:600}
+p{margin:0;max-width:68ch}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:18px;color:var(--ink-2);max-width:64ch}
+.muted{color:var(--muted)}
+.mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+header{display:flex;flex-direction:column;gap:14px;padding-bottom:28px;border-bottom:1px solid var(--grid)}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px 20px;font-family:var(--f-mono);font-size:12.5px;color:var(--ink-2)}
+.meta-row span b{color:var(--ink);font-weight:500}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:1px;background:var(--grid);border:1px solid var(--grid);border-radius:10px;overflow:hidden}
+.kpi{background:var(--surface);padding:20px 22px;display:flex;flex-direction:column;gap:6px}
+.kpi .label{font-size:13px;color:var(--ink-2)}
+.kpi .value{font-size:34px;font-weight:600;line-height:1.05;letter-spacing:-.01em;white-space:nowrap}
+.kpi.hero .value{font-size:56px;color:var(--ink)}
+.kpi .sub{font-size:13px;color:var(--muted)}
+.delta-up{color:var(--good-text);font-weight:500}
+
+section{display:flex;flex-direction:column;gap:18px}
+.sec-head{display:flex;flex-direction:column;gap:6px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.card{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:20px 20px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card-head{display:flex;flex-direction:column;gap:4px}
+.card-head p{font-size:14px;color:var(--ink-2)}
+.chart{width:100%;position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font-family:var(--f-body);font-size:12px;fill:var(--muted)}
+.chart .lbl{fill:var(--ink-2)}
+.chart .lbl-strong{fill:var(--ink);font-weight:600}
+.chart .mono{font-family:var(--f-mono)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.key-line{width:16px;height:2px;border-radius:2px;display:inline-block}
+.key-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.callout{font-size:14px;color:var(--ink-2);border-top:1px solid var(--grid);padding-top:12px}
+.callout b{color:var(--ink);font-weight:600}
+
+/* tooltip */
+#tip{position:fixed;pointer-events:none;z-index:20;background:var(--surface);color:var(--ink);border:1px solid var(--ring);box-shadow:0 6px 20px rgba(0,0,0,.14);border-radius:8px;padding:9px 11px;font-size:12.5px;min-width:140px;opacity:0;transition:opacity .1s}
+#tip .t-title{font-size:12px;color:var(--muted);margin-bottom:5px}
+#tip .t-row{display:flex;align-items:center;gap:8px;justify-content:space-between}
+#tip .t-row .n{display:flex;align-items:center;gap:7px;color:var(--ink-2)}
+#tip .t-row .v{font-family:var(--f-mono);font-weight:500;color:var(--ink)}
+
+/* tables */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--ring);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 14px;text-align:left;border-bottom:1px solid var(--grid);white-space:nowrap}
+th{font-weight:500;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:var(--f-mono)}
+tr:last-child td{border-bottom:none}
+td.r,th.r{text-align:right}
+td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+tr.best td{background:var(--wash)}
+@media (max-width:520px){#t-board th:nth-child(4),#t-board td:nth-child(4),#t-board th:nth-child(5),#t-board td:nth-child(5){display:none}}
+.pos{color:var(--good-text)} .neg{color:var(--bad-text)}
+
+/* upsets */
+.upsets{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.upset{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.upset .date{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.score{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-family:var(--f-display);font-size:24px;font-weight:600;line-height:1.15}
+.score .loser{color:var(--muted)}
+.score .pts{font-family:var(--f-mono);font-size:18px;font-weight:500;align-self:center;text-align:right}
+.upset .note{font-size:13px;color:var(--ink-2)}
+
+/* explorer */
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.ctl{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+select{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--axis);border-radius:6px;padding:7px 10px;min-width:150px}
+select:focus-visible,button:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+.seg{display:inline-flex;border:1px solid var(--axis);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-size:14px;background:var(--surface);color:var(--ink-2);border:0;padding:7px 12px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--axis)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.summary{font-size:14px;color:var(--ink-2);margin-left:auto}
+.summary b{color:var(--ink)}
+.team{font-family:var(--f-display);font-size:17px;font-weight:600;letter-spacing:.02em}
+.probbar{display:flex;align-items:center;gap:8px}
+.probbar .track{width:90px;height:6px;border-radius:3px;background:var(--surface-2);position:relative;overflow:hidden}
+.probbar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--s1);border-radius:3px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:500;padding:2px 8px;border-radius:99px}
+.chip.ok{color:var(--good-text);background:color-mix(in srgb,var(--good) 12%,transparent)}
+.chip.miss{color:var(--bad-text);background:color-mix(in srgb,var(--bad) 12%,transparent)}
+.more{align-self:center;font:inherit;font-size:14px;background:transparent;color:var(--s1);border:1px solid var(--axis);border-radius:6px;padding:8px 16px;cursor:pointer}
+
+/* method */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;counter-reset:st;padding:0;margin:0;list-style:none}
+.steps li{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:14px 16px;font-size:14px;color:var(--ink-2);display:flex;flex-direction:column;gap:4px}
+.steps li::before{counter-increment:st;content:"Step " counter(st);font-family:var(--f-mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.steps li b{color:var(--ink);font-weight:600}
+.notes{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.notes ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--ink-2)}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--grid);padding-top:18px;display:flex;flex-direction:column;gap:4px}
+
+@media (max-width:820px){
+  .kpis{grid-template-columns:1fr 1fr}
+  .kpi.hero,.kpi:last-child{grid-column:1/-1}
+  .kpi .value{font-size:28px}
+  .kpi.hero .value{font-size:48px}
+  .grid-2,.notes{grid-template-columns:1fr}
+  .summary{margin-left:0;width:100%}
+}
+@media (max-width:440px){.kpi .value{font-size:24px}.kpi{padding:16px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Data analysis project · NBA regular season</div>
+    <h1>NBA Game Predictor</h1>
+    <p class="lede">A model that picks the winner of every game using only what was known before tip-off. It was trained on <span class="v-ntrain"></span> seasons and then tested on all <span id="h-ntest"></span> games of <span class="v-test"></span>, the most recent complete season, which it never saw.</p>
+    <div class="meta-row">
+      <span>Training <b id="h-train"></b></span>
+      <span>Test season <b id="h-test"></b></span>
+      <span>Features <b id="h-feat"></b></span>
+      <span>Final model <b id="h-model"></b></span>
+    </div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Held-out test · <span class="v-test"></span></div>
+      <h2>How the models scored</h2>
+      <p class="muted">Each approach predicted all <span class="v-ntest"></span> games of <span class="v-test"></span> without seeing any of them first. Log loss measures how good the probabilities are, and lower is better. Accuracy only counts right and wrong picks.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head"><h3>Accuracy by approach</h3><p>Share of games where the predicted winner won. The dashed line marks a coin flip.</p></div>
+        <div class="chart" id="c-board"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Scorecard</h3><p>Brier score is the mean squared error of the win probability. AUC measures how well the model ranks likely winners above likely losers.</p></div>
+        <div class="tbl-wrap" style="border:none"><table id="t-board"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Robustness check</div>
+      <h2>Is one good season luck?</h2>
+      <p class="muted">Walk-forward validation: for each season from 2013-14 onward, a fresh model is trained on every earlier season and then predicts that season.</p>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Accuracy by season</h3></div>
+      <div class="legend" id="lg-walk"></div>
+      <div class="chart" id="c-walk"></div>
+      <p class="callout" id="walk-note"></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Trusting the probabilities</div>
+      <h2>When the model is confident, it is usually right</h2>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head"><h3>Accuracy by confidence</h3><p>Games grouped by how sure the model was of its pick. The tick on each column marks the model's average confidence in that group.</p></div>
+        <div class="chart" id="c-conf"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Calibration</h3><p>Predicted home-win chance compared with how often the home team actually won. Dots on the diagonal mean the probabilities are honest.</p></div>
+        <div class="chart" id="c-calib"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">What drives the predictions</div>
+      <h2>Team strength does most of the work</h2>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head"><h3>Adding feature groups one at a time</h3><p>Walk-forward results averaged across <span class="v-nwalk"></span> seasons, using logistic regression at each step.</p></div>
+        <div class="tbl-wrap" style="border:none"><table id="t-abl"></table></div>
+        <p class="callout" id="abl-note"></p>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Back-to-backs swing games</h3><p>Home win rate by rest situation, 2011-12 to <span class="v-last"></span>. A back-to-back means the team also played the day before.</p></div>
+        <div class="chart" id="c-rest"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Home-court advantage is shrinking</h3><p>Share of regular-season games won by the home team. Home teams won about 60% of games in the early 2010s and about 55% in recent seasons. The model learns home advantage from past seasons, so a falling rate makes it slightly too kind to home teams.</p></div>
+      <div class="chart" id="c-home"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Checked against real results</div>
+      <h2>Where it hit and where it missed</h2>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Accuracy in games involving each team</h3><p>Teams whose results track their rating are easy to call. Inconsistent teams are hard. The dashed line marks the overall accuracy.</p></div>
+      <div class="chart" id="c-team"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Accuracy by month</h3></div>
+      <div class="chart" id="c-month"></div>
+      <p class="callout" id="month-note"></p>
+    </div>
+    <div class="sec-head" style="margin-top:8px">
+      <h3>The ten biggest upsets</h3>
+      <p class="muted" style="font-size:14px">The model's most confident wrong picks. Most are strong home teams losing to weak visitors. Box scores can't show who sat out that night, which is the likeliest explanation for many of them.</p>
+    </div>
+    <div class="upsets" id="upsets"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Game explorer</div>
+      <h2>Every <span class="v-test"></span> prediction</h2>
+    </div>
+    <div class="controls">
+      <label class="ctl" for="f-team">Team<select id="f-team"></select></label>
+      <label class="ctl" for="f-month">Month<select id="f-month"></select></label>
+      <div class="ctl">Result
+        <div class="seg" id="f-res" role="group" aria-label="Result filter">
+          <button type="button" data-v="all" aria-pressed="true">All</button>
+          <button type="button" data-v="1" aria-pressed="false">Correct</button>
+          <button type="button" data-v="0" aria-pressed="false">Missed</button>
+        </div>
+      </div>
+      <div class="summary" id="x-sum"></div>
+    </div>
+    <div class="tbl-wrap"><table id="t-games"></table></div>
+    <button class="more" id="x-more" type="button">Show 50 more</button>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Method</div>
+      <h2>How it was built</h2>
+    </div>
+    <ol class="steps">
+      <li><b>Collect</b>Team box scores for <span class="v-ngames"></span> regular-season games, 2010-11 to 2025-26. NBA.com data covers seasons through 2023-24, and ESPN covers the two newest. Both sources were checked against each other on 2023-24.</li>
+      <li><b>Engineer</b>Possessions, offensive and defensive ratings, and Dean Oliver's Four Factors for each game.</li>
+      <li><b>Look back only</b>Every feature uses games before the one being predicted. Early-season numbers lean on last season until about 10 games have been played.</li>
+      <li><b>Rate teams</b>Elo ratings are updated after every game with a margin-of-victory multiplier. Each summer they are pulled 25% back toward average.</li>
+      <li><b>Model</b>Logistic regression and gradient boosting on home-minus-away differences, with settings tuned on <span class="v-valid"></span>.</li>
+      <li><b>Test</b><span class="v-test"></span> is scored once at the end, and walk-forward validation checks <span class="v-nwalk"></span> seasons.</li>
+    </ol>
+    <div class="notes">
+      <div class="card">
+        <h3>What the model can't see</h3>
+        <ul>
+          <li>Injuries, rest days and lineup news, which move odds the most on game day</li>
+          <li>Trades during the season, until they show up in results</li>
+          <li>Betting market lines, which already combine all of the above</li>
+          <li>Playoff games, which are excluded here</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Ways to extend it</h3>
+        <ul>
+          <li>Add player-level availability from the box-score files to weight each team by who actually played</li>
+          <li>Compare against closing betting lines as the benchmark</li>
+          <li>Predict the point margin as well as the winner</li>
+          <li>Add playoff and play-in games, which follow different patterns</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Data 2010-11 to 2023-24: NBA-Data-2010-2024 by Vitalii Korolyk (github.com/NocturneBear/NBA-Data-2010-2024), MIT licence, sourced from NBA.com.</span>
+    <span>Data 2024-25 and 2025-26: ESPN team box scores published by sportsdataverse (github.com/sportsdataverse/sportsdataverse-data).</span>
+    <span>Built with Python (pandas, scikit-learn). Every number on this page comes from nba_predictor.py.</span>
+  </footer>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const D = __DATA__;
+const $ = s => document.querySelector(s);
+const pct = (v, d = 1) => (v * 100).toFixed(d) + "%";
+const NS = "http://www.w3.org/2000/svg";
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const MONTHS = {"01":"Jan","02":"Feb","03":"Mar","04":"Apr","05":"May","06":"Jun","07":"Jul","08":"Aug","09":"Sep","10":"Oct","11":"Nov","12":"Dec"};
+const fmtDate = iso => { const [y,m,d] = iso.slice(0,10).split("-"); return `${MONTHS[m]} ${+d}, ${y}`; };
+const monthLabel = ym => { const [y,m] = ym.split("-"); return `${MONTHS[m]} ${y}`; };
+
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function txt(parent, x, y, s, attrs = {}) {
+  const t = el("text", {x, y, ...attrs}, parent); t.textContent = s; return t;
+}
+function h(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in props) { if (k === "class") e.className = props[k]; else if (k === "text") e.textContent = props[k]; else e.setAttribute(k, props[k]); }
+  kids.forEach(k => k != null && e.append(k));
+  return e;
+}
+
+/* ---------- tooltip ---------- */
+const tip = $("#tip");
+function showTip(ev, title, rows) {
+  tip.replaceChildren();
+  tip.append(h("div", {class: "t-title", text: title}));
+  rows.forEach(([name, val, color]) => {
+    const n = h("span", {class: "n"});
+    if (color) { const k = h("span", {class: "key-line"}); k.style.background = color; n.append(k); }
+    n.append(document.createTextNode(name));
+    tip.append(h("div", {class: "t-row"}, n, h("span", {class: "v", text: val})));
+  });
+  tip.style.opacity = 1; moveTip(ev);
+}
+function moveTip(ev) {
+  const r = tip.getBoundingClientRect();
+  let x = (ev.clientX ?? 0) + 14, y = (ev.clientY ?? 0) + 14;
+  if (ev.type === "focus") { const b = ev.target.getBoundingClientRect(); x = b.right + 8; y = b.top; }
+  if (x + r.width > innerWidth - 8) x = Math.max(8, (ev.clientX ?? innerWidth) - r.width - 14);
+  if (y + r.height > innerHeight - 8) y = Math.max(8, (ev.clientY ?? innerHeight) - r.height - 14);
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+const hideTip = () => tip.style.opacity = 0;
+function hover(target, fn) {
+  target.setAttribute("tabindex", "0");
+  target.style.cursor = "default";
+  target.addEventListener("pointermove", ev => fn(ev));
+  target.addEventListener("focus", ev => fn(ev));
+  target.addEventListener("pointerleave", hideTip);
+  target.addEventListener("blur", hideTip);
+}
+
+/* ---------- header + KPIs ---------- */
+const M = D.meta;
+const R = Object.fromEntries(D.results.map(r => [r.model, r]));
+const best = R[M.best_model];
+$("#h-ntest").textContent = M.n_test.toLocaleString();
+$("#h-train").textContent = `${M.train_seasons} · ${M.n_train.toLocaleString()} games`;
+$("#h-test").textContent = M.test_season;
+$("#h-feat").textContent = `${M.n_features} pre-game`;
+$("#h-model").textContent = M.best_model;
+
+const confHi = D.by_conf.filter(b => b.conf_bin === "80–90%" || b.conf_bin === "90%+");
+const hiGames = confHi.reduce((a, b) => a + b.games, 0);
+const hiAcc = confHi.reduce((a, b) => a + b.accuracy * b.games, 0) / hiGames;
+const kp = [
+  {cls: "hero", label: `Winners picked correctly, ${M.test_season}`, value: pct(best.accuracy), sub: `${Math.round(best.accuracy * M.n_test).toLocaleString()} of ${M.n_test.toLocaleString()} games`},
+  {label: "Edge over Elo ratings alone", value: "+" + ((best.accuracy - R["Elo only"].accuracy) * 100).toFixed(1) + " pts", sub: `Elo alone: ${pct(R["Elo only"].accuracy)}`, up: true},
+  {label: "Edge over always picking home", value: "+" + ((best.accuracy - R["Home team always wins"].accuracy) * 100).toFixed(1) + " pts", sub: `Home team won ${pct(M.home_win_rate_test)}`, up: true},
+  {label: "Accuracy when 80%+ confident", value: pct(hiAcc), sub: `${hiGames} games`},
+];
+kp.forEach(k => {
+  const v = h("div", {class: "value" + (k.up ? " delta-up" : ""), text: k.value});
+  $("#kpis").append(h("div", {class: "kpi " + (k.cls || "")}, h("div", {class: "label", text: k.label}), v, h("div", {class: "sub", text: k.sub})));
+});
+
+const fill = (cls, v) => document.querySelectorAll(cls).forEach(e => e.textContent = v);
+fill(".v-test", M.test_season); fill(".v-valid", M.valid_season); fill(".v-last", M.last_season);
+fill(".v-ntrain", M.n_train_seasons); fill(".v-nwalk", M.n_walk_seasons);
+fill(".v-ntest", M.n_test.toLocaleString()); fill(".v-ngames", M.n_games_total.toLocaleString());
+
+/* ---------- month note ---------- */
+function buildMonthNote() {
+  const bm = D.by_month, first2 = bm.slice(0, Math.ceil(bm.length / 2)), last2 = bm.slice(-2);
+  const acc = rows => rows.reduce((a, r) => a + r.accuracy * r.games, 0) / rows.reduce((a, r) => a + r.games, 0);
+  $("#month-note").append(h("b", {text: `Accuracy climbs late in the season: ${pct(acc(last2), 0)} over the final two months, against ${pct(acc(first2), 0)} in the first half.`}),
+    document.createTextNode(" Early on, team ratings still lean on last season. By spring the model has seen most of the season, and the gap between contenders and tanking teams tends to be widest."));
+}
+
+/* ---------- generic helpers ---------- */
+function frame(host, height, m) {
+  host.replaceChildren();
+  const W = Math.max(300, host.clientWidth);
+  const svg = el("svg", {viewBox: `0 0 ${W} ${height}`, role: "img"}, host);
+  return {svg, W, H: height, iw: W - m.l - m.r, ih: height - m.t - m.b, m};
+}
+const lin = (d0, d1, r0, r1) => v => r0 + (v - d0) / (d1 - d0) * (r1 - r0);
+
+/* ---------- leaderboard dot plot ---------- */
+const ORDER = ["Home team always wins", "Better record wins", "Elo only", "Gradient boosting", "Ensemble (LR + GB)", "Logistic regression"];
+const SHORT = {"Home team always wins": "Always pick home", "Better record wins": "Better record wins", "Elo only": "Elo ratings only", "Gradient boosting": "Gradient boosting", "Ensemble (LR + GB)": "Ensemble (LR + GB)", "Logistic regression": "Logistic regression"};
+function drawBoard() {
+  const host = $("#c-board");
+  const narrow = host.clientWidth < 440;
+  const rowH = 38, m = {l: narrow ? 128 : 150, r: 52, t: 8, b: 30};
+  const f = frame(host, m.t + m.b + rowH * ORDER.length, m);
+  f.svg.setAttribute("aria-label", "Test-season accuracy for each approach");
+  const x = lin(0.5, 0.7, m.l, m.l + f.iw);
+  [0.5, 0.55, 0.6, 0.65, 0.7].forEach(v => {
+    el("line", {x1: x(v), x2: x(v), y1: m.t, y2: m.t + f.ih, stroke: css("--grid"), "stroke-width": 1}, f.svg);
+    txt(f.svg, x(v), f.H - 8, pct(v, 0), {"text-anchor": "middle", class: "mono"});
+  });
+  el("line", {x1: x(0.5), x2: x(0.5), y1: m.t, y2: m.t + f.ih, stroke: css("--axis"), "stroke-width": 1, "stroke-dasharray": "3 3"}, f.svg);
+  ORDER.forEach((name, i) => {
+    const r = R[name], y = m.t + i * rowH + rowH / 2, isBest = name === M.best_model;
+    const g = el("g", {}, f.svg);
+    el("rect", {x: 0, y: y - rowH / 2, width: f.W, height: rowH, fill: "transparent"}, g);
+    txt(g, m.l - 12, y + 4, SHORT[name], {"text-anchor": "end", class: isBest ? "lbl-strong" : "lbl", style: "font-size:13px"});
+    el("line", {x1: x(0.5), x2: x(r.accuracy), y1: y, y2: y, stroke: isBest ? css("--s1") : css("--base"), "stroke-width": 2, "stroke-linecap": "round"}, g);
+    el("circle", {cx: x(r.accuracy), cy: y, r: isBest ? 6 : 5, fill: isBest ? css("--s1") : css("--base"), stroke: css("--surface"), "stroke-width": 2}, g);
+    txt(g, x(r.accuracy) + 11, y + 4, pct(r.accuracy), {class: "mono " + (isBest ? "lbl-strong" : "lbl")});
+    hover(g, ev => showTip(ev, SHORT[name], [["Accuracy", pct(r.accuracy)], ["Log loss", r.log_loss.toFixed(3)], ["Brier", r.brier.toFixed(3)]]));
+  });
+}
+function buildBoardTable() {
+  const t = $("#t-board");
+  t.append(h("thead", {}, h("tr", {}, h("th", {text: "Approach"}), h("th", {class: "r", text: "Accuracy"}), h("th", {class: "r", text: "Log loss"}), h("th", {class: "r", text: "Brier"}), h("th", {class: "r", text: "AUC"}))));
+  const tb = h("tbody");
+  [...ORDER].reverse().forEach(name => {
+    const r = R[name];
+    tb.append(h("tr", {class: name === M.best_model ? "best" : ""},
+      h("td", {text: SHORT[name]}), h("td", {class: "num r", text: pct(r.accuracy)}),
+      h("td", {class: "num r", text: r.log_loss.toFixed(3)}), h("td", {class: "num r", text: r.brier.toFixed(3)}),
+      h("td", {class: "num r", text: name === "Home team always wins" ? "n/a" : r.auc.toFixed(3)})));
+  });
+  t.append(tb);
+}
+
+/* ---------- walk-forward line chart ---------- */
+const WALK_SERIES = [
+  {model: "Logistic regression", label: "Logistic regression (final model)", c: "--s1"},
+  {model: "Elo only", label: "Elo ratings only", c: "--s2"},
+  {model: "Home team always wins", label: "Always pick home", c: "--s3"},
+];
+const seasons = [...new Set(D.walk_forward.map(r => r.season))];
+const walkVal = (model, s) => D.walk_forward.find(r => r.model === model && r.season === s).accuracy;
+const walkMean = model => { const rs = D.walk_forward.filter(r => r.model === model); return rs.reduce((a, r) => a + r.accuracy, 0) / rs.length; };
+function buildWalkLegend() {
+  WALK_SERIES.forEach(s => {
+    const k = h("span", {class: "key-line"}); k.style.background = `var(${s.c})`;
+    $("#lg-walk").append(h("span", {}, k, document.createTextNode(`${s.label} · avg ${pct(walkMean(s.model))}`)));
+  });
+  const lr = walkMean("Logistic regression"), elo = walkMean("Elo only");
+  const beats = seasons.filter(s => walkVal("Logistic regression", s) >= walkVal("Elo only", s)).length;
+  const n = $("#walk-note");
+  n.append(h("b", {text: `The model beats or ties Elo in ${beats} of ${seasons.length} seasons, by ${((lr - elo) * 100).toFixed(1)} points on average.`}),
+    document.createTextNode(` Over the last three seasons its edge was ${seasons.slice(-3).map(se => (walkVal("Logistic regression", se) - walkVal("Elo only", se) >= 0 ? "+" : "−") + Math.abs((walkVal("Logistic regression", se) - walkVal("Elo only", se)) * 100).toFixed(1)).join(", ")} points, so the extra features have helped more lately.`),
+    document.createTextNode(" 2020-21 was Elo's worst season: it was shortened, many arenas had no crowds, and rosters changed constantly under Covid protocols."));
+}
+function drawWalk() {
+  const host = $("#c-walk");
+  const m = {l: 44, r: 16, t: 12, b: 34};
+  const f = frame(host, 300, m);
+  f.svg.setAttribute("aria-label", "Walk-forward accuracy by season for three approaches");
+  const x = i => m.l + (i / (seasons.length - 1)) * f.iw;
+  const y = lin(0.5, 0.72, m.t + f.ih, m.t);
+  [0.5, 0.55, 0.6, 0.65, 0.7].forEach(v => {
+    el("line", {x1: m.l, x2: m.l + f.iw, y1: y(v), y2: y(v), stroke: v === 0.5 ? css("--axis") : css("--grid"), "stroke-width": 1}, f.svg);
+    txt(f.svg, m.l - 8, y(v) + 4, pct(v, 0), {"text-anchor": "end", class: "mono"});
+  });
+  const every = f.W < 560 ? 2 : 1;
+  seasons.forEach((s, i) => { if (i % every === 0) txt(f.svg, x(i), f.H - 10, f.W < 560 ? "’" + s.slice(2, 4) : s, {"text-anchor": "middle", class: "mono"}); });
+  const cross = el("line", {x1: 0, x2: 0, y1: m.t, y2: m.t + f.ih, stroke: css("--axis"), "stroke-width": 1, opacity: 0}, f.svg);
+  [...WALK_SERIES].reverse().forEach(s => {
+    const pts = seasons.map((se, i) => [x(i), y(walkVal(s.model, se))]);
+    el("path", {d: "M" + pts.map(p => p.join(",")).join("L"), fill: "none", stroke: css(s.c), "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round"}, f.svg);
+    const last = pts[pts.length - 1];
+    el("circle", {cx: last[0], cy: last[1], r: 4, fill: css(s.c), stroke: css("--surface"), "stroke-width": 2}, f.svg);
+  });
+  const dots = WALK_SERIES.map(s => el("circle", {r: 4, fill: css(s.c), stroke: css("--surface"), "stroke-width": 2, opacity: 0}, f.svg));
+  const hit = el("rect", {x: m.l - 10, y: m.t, width: f.iw + 20, height: f.ih, fill: "transparent"}, f.svg);
+  const onMove = ev => {
+    const b = f.svg.getBoundingClientRect(), sx = (ev.clientX - b.left) * (f.W / b.width);
+    const i = Math.max(0, Math.min(seasons.length - 1, Math.round((sx - m.l) / f.iw * (seasons.length - 1))));
+    cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("opacity", 1);
+    WALK_SERIES.forEach((s, k) => { dots[k].setAttribute("cx", x(i)); dots[k].setAttribute("cy", y(walkVal(s.model, seasons[i]))); dots[k].setAttribute("opacity", 1); });
+    showTip(ev, seasons[i], WALK_SERIES.map(s => [s.label.replace(" (final model)", ""), pct(walkVal(s.model, seasons[i])), css(s.c)]));
+  };
+  hit.addEventListener("pointermove", onMove);
+  hit.addEventListener("pointerleave", () => { hideTip(); cross.setAttribute("opacity", 0); dots.forEach(d => d.setAttribute("opacity", 0)); });
+}
+
+/* ---------- confidence columns ---------- */
+function drawConf() {
+  const host = $("#c-conf");
+  const m = {l: 40, r: 8, t: 22, b: 44};
+  const f = frame(host, 280, m);
+  f.svg.setAttribute("aria-label", "Accuracy by model confidence");
+  const y = lin(0, 1, m.t + f.ih, m.t);
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => {
+    el("line", {x1: m.l, x2: m.l + f.iw, y1: y(v), y2: y(v), stroke: v === 0 ? css("--axis") : css("--grid"), "stroke-width": 1}, f.svg);
+    txt(f.svg, m.l - 8, y(v) + 4, pct(v, 0), {"text-anchor": "end", class: "mono"});
+  });
+  const n = D.by_conf.length, band = f.iw / n, bw = Math.min(24, band * 0.5);
+  D.by_conf.forEach((b, i) => {
+    const cx = m.l + band * i + band / 2, top = y(b.accuracy), base = y(0), r = 4;
+    const g = el("g", {}, f.svg);
+    el("rect", {x: cx - band / 2, y: m.t, width: band, height: f.ih, fill: "transparent"}, g);
+    el("path", {d: `M${cx - bw / 2},${base}V${top + r}Q${cx - bw / 2},${top} ${cx - bw / 2 + r},${top}H${cx + bw / 2 - r}Q${cx + bw / 2},${top} ${cx + bw / 2},${top + r}V${base}Z`, fill: css("--s1")}, g);
+    el("line", {x1: cx - bw / 2 - 6, x2: cx + bw / 2 + 6, y1: y(b.avg_conf), y2: y(b.avg_conf), stroke: css("--ink"), "stroke-width": 2, "stroke-linecap": "round"}, g);
+    txt(g, cx, Math.min(top, y(b.avg_conf)) - 8, pct(b.accuracy, 0), {"text-anchor": "middle", class: "mono lbl-strong"});
+    txt(g, cx, f.H - 24, b.conf_bin, {"text-anchor": "middle", class: "lbl mono", style: band < 80 ? "font-size:10.5px" : ""});
+    txt(g, cx, f.H - 8, band < 80 ? `n=${b.games}` : b.games + " games", {"text-anchor": "middle", style: band < 80 ? "font-size:10.5px" : ""});
+    hover(g, ev => showTip(ev, `Confidence ${b.conf_bin}`, [["Actual accuracy", pct(b.accuracy)], ["Avg confidence", pct(b.avg_conf)], ["Games", String(b.games)]]));
+  });
+}
+
+/* ---------- calibration ---------- */
+function drawCalib() {
+  const host = $("#c-calib");
+  const m = {l: 44, r: 12, t: 12, b: 40};
+  const W = Math.max(300, host.clientWidth), size = Math.min(W, 340);
+  const f = frame(host, size, m);
+  f.svg.setAttribute("aria-label", "Calibration: predicted versus actual home win rate");
+  const side = Math.min(f.iw, f.ih);
+  const x = lin(0, 1, m.l, m.l + side), y = lin(0, 1, m.t + side, m.t);
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => {
+    el("line", {x1: x(0), x2: x(1), y1: y(v), y2: y(v), stroke: css("--grid"), "stroke-width": 1}, f.svg);
+    el("line", {x1: x(v), x2: x(v), y1: y(0), y2: y(1), stroke: css("--grid"), "stroke-width": 1}, f.svg);
+    txt(f.svg, m.l - 8, y(v) + 4, pct(v, 0), {"text-anchor": "end", class: "mono"});
+    txt(f.svg, x(v), y(0) + 18, pct(v, 0), {"text-anchor": "middle", class: "mono"});
+  });
+  txt(f.svg, x(0.5), y(0) + 36, "Predicted home win chance", {"text-anchor": "middle", class: "lbl"});
+  el("line", {x1: x(0), y1: y(0), x2: x(1), y2: y(1), stroke: css("--axis"), "stroke-width": 1.5}, f.svg);
+  txt(f.svg, x(0.78), y(0.86), "perfect", {"text-anchor": "end", style: "font-size:11px"});
+  D.calibration.forEach(c => {
+    const g = el("g", {}, f.svg);
+    el("circle", {cx: x(c.pred_mean), cy: y(c.actual), r: 12, fill: "transparent"}, g);
+    el("circle", {cx: x(c.pred_mean), cy: y(c.actual), r: Math.max(4, Math.min(8, Math.sqrt(c.n) / 2)), fill: css("--s1"), stroke: css("--surface"), "stroke-width": 2}, g);
+    hover(g, ev => showTip(ev, `Predicted ${pct(c.pred_mean, 0)}`, [["Home team actually won", pct(c.actual)], ["Games", String(c.n)]]));
+  });
+  txt(f.svg, x(0.02), y(0.98), "Actual home win rate", {class: "lbl"});
+}
+
+/* ---------- ablation table ---------- */
+function buildAbl() {
+  const t = $("#t-abl");
+  t.append(h("thead", {}, h("tr", {}, h("th", {text: "Features used"}), h("th", {class: "r", text: "Accuracy"}), h("th", {class: "r", text: "Log loss"}), h("th", {class: "r", text: "Change"}))));
+  const tb = h("tbody");
+  D.ablation.forEach((a, i) => {
+    const prev = i ? D.ablation[i - 1].log_loss : null;
+    const dl = prev == null ? null : a.log_loss - prev;
+    tb.append(h("tr", {class: i === D.ablation.length - 1 ? "best" : ""},
+      h("td", {}, document.createTextNode(i === 0 ? "Elo rating only" : a.step), h("span", {class: "muted", text: ` (${a.n_features})`})),
+      h("td", {class: "num r", text: pct(a.accuracy, 2)}), h("td", {class: "num r", text: a.log_loss.toFixed(4)}),
+      h("td", {class: "num r " + (dl == null ? "" : dl < 0 ? "pos" : "neg"), text: dl == null ? "–" : (dl < 0 ? "−" : "+") + Math.abs(dl).toFixed(4)})));
+  });
+  t.append(tb);
+  const first = D.ablation[0], last = D.ablation[D.ablation.length - 1];
+  $("#abl-note").append(h("b", {text: `One Elo number already reaches ${pct(first.accuracy)}.`}),
+    document.createTextNode(` (Here Elo's home-court edge is learned from the data, which is why this beats the raw Elo baseline.) The other ${last.n_features - 1} features add only ${((last.accuracy - first.accuracy) * 100).toFixed(2)} points of accuracy. Rest and schedule give the clearest gain, because Elo knows nothing about fatigue. Four Factors mostly repeat what net rating already says. Negative log-loss change (green) means the added group helped.`));
+}
+
+/* ---------- rest bars ---------- */
+function drawRest() {
+  const host = $("#c-rest");
+  const narrow = host.clientWidth < 460;
+  const rowH = 58, m = {l: narrow ? 130 : 200, r: 56, t: 6, b: 26};
+  const f = frame(host, m.t + m.b + rowH * D.rest_split.length, m);
+  f.svg.setAttribute("aria-label", "Home win rate by back-to-back situation");
+  const x = lin(0, 0.7, m.l, m.l + f.iw);
+  [0, 0.2, 0.4, 0.6].forEach(v => {
+    el("line", {x1: x(v), x2: x(v), y1: m.t, y2: m.t + f.ih, stroke: v === 0 ? css("--axis") : css("--grid"), "stroke-width": 1}, f.svg);
+    txt(f.svg, x(v), f.H - 6, pct(v, 0), {"text-anchor": "middle", class: "mono"});
+  });
+  const short = {"Neither team on a back-to-back": ["Neither team", "Neither team tired"], "Only away team on a back-to-back": ["Away tired", "Only away team tired"], "Only home team on a back-to-back": ["Home tired", "Only home team tired"], "Both on a back-to-back": ["Both tired", "Both teams tired"]};
+  D.rest_split.forEach((r, i) => {
+    const yc = m.t + i * rowH + rowH / 2, bh = 20, x0 = x(0), x1 = x(r.home_win_rate), rr = 4;
+    const g = el("g", {}, f.svg);
+    el("rect", {x: 0, y: yc - rowH / 2, width: f.W, height: rowH, fill: "transparent"}, g);
+    txt(g, m.l - 12, yc - 1, short[r.situation][narrow ? 0 : 1], {"text-anchor": "end", class: "lbl", style: "font-size:13px"});
+    txt(g, m.l - 12, yc + 14, r.games.toLocaleString() + " games", {"text-anchor": "end", style: "font-size:11px"});
+    el("path", {d: `M${x0},${yc - bh / 2}H${x1 - rr}Q${x1},${yc - bh / 2} ${x1},${yc - bh / 2 + rr}V${yc + bh / 2 - rr}Q${x1},${yc + bh / 2} ${x1 - rr},${yc + bh / 2}H${x0}Z`, fill: css("--s1")}, g);
+    txt(g, x1 + 8, yc + 4, pct(r.home_win_rate), {class: "mono lbl-strong"});
+    hover(g, ev => showTip(ev, r.situation, [["Home win rate", pct(r.home_win_rate)], ["Games", r.games.toLocaleString()]]));
+  });
+}
+
+/* ---------- home court line ---------- */
+function drawHome() {
+  const host = $("#c-home");
+  const hs = D.home_by_season, m = {l: 44, r: 50, t: 16, b: 32};
+  const f = frame(host, 220, m);
+  f.svg.setAttribute("aria-label", "Home win rate by season");
+  const x = i => m.l + i / (hs.length - 1) * f.iw, y = lin(0.5, 0.63, m.t + f.ih, m.t);
+  [0.5, 0.55, 0.6].forEach(v => {
+    el("line", {x1: m.l, x2: m.l + f.iw, y1: y(v), y2: y(v), stroke: v === 0.5 ? css("--axis") : css("--grid"), "stroke-width": 1}, f.svg);
+    txt(f.svg, m.l - 8, y(v) + 4, pct(v, 0), {"text-anchor": "end", class: "mono"});
+  });
+  const every = f.W < 600 ? 3 : 1;
+  hs.forEach((r, i) => { if (i % every === 0 || i === hs.length - 1) txt(f.svg, x(i), f.H - 8, f.W < 600 ? "’" + r.season.slice(2, 4) : r.season, {"text-anchor": "middle", class: "mono"}); });
+  const pts = hs.map((r, i) => [x(i), y(r.home_win_rate)]);
+  const area = el("path", {d: `M${pts[0][0]},${y(0.5)}L` + pts.map(p => p.join(",")).join("L") + `L${pts[pts.length - 1][0]},${y(0.5)}Z`, fill: css("--s1"), opacity: 0.1}, f.svg);
+  el("path", {d: "M" + pts.map(p => p.join(",")).join("L"), fill: "none", stroke: css("--s1"), "stroke-width": 2, "stroke-linejoin": "round"}, f.svg);
+  const first = pts[0], last = pts[pts.length - 1];
+  [first, last].forEach(p => el("circle", {cx: p[0], cy: p[1], r: 4, fill: css("--s1"), stroke: css("--surface"), "stroke-width": 2}, f.svg));
+  txt(f.svg, last[0] + 8, last[1] + 4, pct(hs[hs.length - 1].home_win_rate), {class: "mono lbl-strong"});
+  txt(f.svg, first[0] + 8, first[1] - 8, pct(hs[0].home_win_rate), {class: "mono lbl-strong"});
+  const cross = el("line", {y1: m.t, y2: m.t + f.ih, stroke: css("--axis"), "stroke-width": 1, opacity: 0}, f.svg);
+  const dot = el("circle", {r: 4, fill: css("--s1"), stroke: css("--surface"), "stroke-width": 2, opacity: 0}, f.svg);
+  const hit = el("rect", {x: m.l - 10, y: m.t, width: f.iw + 20, height: f.ih, fill: "transparent"}, f.svg);
+  hit.addEventListener("pointermove", ev => {
+    const b = f.svg.getBoundingClientRect(), sx = (ev.clientX - b.left) * (f.W / b.width);
+    const i = Math.max(0, Math.min(hs.length - 1, Math.round((sx - m.l) / f.iw * (hs.length - 1))));
+    cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("opacity", 1);
+    dot.setAttribute("cx", x(i)); dot.setAttribute("cy", y(hs[i].home_win_rate)); dot.setAttribute("opacity", 1);
+    showTip(ev, hs[i].season, [["Home win rate", pct(hs[i].home_win_rate)]]);
+  });
+  hit.addEventListener("pointerleave", () => { hideTip(); cross.setAttribute("opacity", 0); dot.setAttribute("opacity", 0); });
+}
+
+/* ---------- team dot plot ---------- */
+function drawTeams() {
+  const host = $("#c-team");
+  const teams = [...D.by_team].sort((a, b) => a.accuracy - b.accuracy);
+  const W = Math.max(300, host.clientWidth);
+  const cols = W > 760 ? 2 : 1, perCol = Math.ceil(teams.length / cols), rowH = 24;
+  const m = {l: 0, r: 0, t: 4, b: 28};
+  const f = frame(host, m.t + m.b + perCol * rowH, m);
+  f.svg.setAttribute("aria-label", "Prediction accuracy in games involving each team");
+  const colW = (f.W - (cols - 1) * 40) / cols;
+  const avg = D.results.find(r => r.model === M.best_model).accuracy;
+  for (let c = 0; c < cols; c++) {
+    const ox = c * (colW + 40), lab = 150, x = lin(0.45, 0.85, ox + lab, ox + colW - 44);
+    [0.5, 0.6, 0.7, 0.8].forEach(v => {
+      el("line", {x1: x(v), x2: x(v), y1: m.t, y2: m.t + perCol * rowH, stroke: css("--grid"), "stroke-width": 1}, f.svg);
+      txt(f.svg, x(v), f.H - 8, pct(v, 0), {"text-anchor": "middle", class: "mono"});
+    });
+    el("line", {x1: x(avg), x2: x(avg), y1: m.t, y2: m.t + perCol * rowH, stroke: css("--axis"), "stroke-width": 1, "stroke-dasharray": "3 3"}, f.svg);
+    teams.slice(c * perCol, (c + 1) * perCol).forEach((t, i) => {
+      const yc = m.t + i * rowH + rowH / 2, g = el("g", {}, f.svg);
+      el("rect", {x: ox, y: yc - rowH / 2, width: colW, height: rowH, fill: "transparent"}, g);
+      txt(g, ox, yc + 5, t.team, {style: "font-family:var(--f-display);font-size:16px;font-weight:600", class: "lbl-strong"});
+      txt(g, ox + 52, yc + 4, `${t.wins}–${82 - t.wins}`, {class: "mono", style: "font-size:11.5px"});
+      el("line", {x1: x(0.45), x2: x(0.85), y1: yc, y2: yc, stroke: css("--grid"), "stroke-width": 1}, g);
+      el("circle", {cx: x(t.accuracy), cy: yc, r: 5, fill: css("--s1"), stroke: css("--surface"), "stroke-width": 2}, g);
+      txt(g, x(t.accuracy) + 10, yc + 4, pct(t.accuracy, 0), {class: "mono lbl"});
+      hover(g, ev => showTip(ev, t.team_name, [["Games called correctly", `${Math.round(t.accuracy * t.games)} of ${t.games}`], ["Accuracy", pct(t.accuracy)], [`${M.test_season} record`, `${t.wins}–${82 - t.wins}`]]));
+    });
+  }
+}
+
+/* ---------- month columns ---------- */
+function drawMonth() {
+  const host = $("#c-month");
+  const bm = D.by_month, m = {l: 40, r: 8, t: 22, b: 40};
+  const f = frame(host, 220, m);
+  f.svg.setAttribute("aria-label", "Accuracy by month");
+  const y = lin(0, 1, m.t + f.ih, m.t);
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => {
+    el("line", {x1: m.l, x2: m.l + f.iw, y1: y(v), y2: y(v), stroke: v === 0 ? css("--axis") : css("--grid"), "stroke-width": 1}, f.svg);
+    txt(f.svg, m.l - 8, y(v) + 4, pct(v, 0), {"text-anchor": "end", class: "mono"});
+  });
+  const band = f.iw / bm.length, bw = Math.min(24, band * 0.5);
+  bm.forEach((b, i) => {
+    const cx = m.l + band * i + band / 2, top = y(b.accuracy), base = y(0), r = 4, g = el("g", {}, f.svg);
+    el("rect", {x: cx - band / 2, y: m.t, width: band, height: f.ih, fill: "transparent"}, g);
+    el("path", {d: `M${cx - bw / 2},${base}V${top + r}Q${cx - bw / 2},${top} ${cx - bw / 2 + r},${top}H${cx + bw / 2 - r}Q${cx + bw / 2},${top} ${cx + bw / 2},${top + r}V${base}Z`, fill: css("--s1")}, g);
+    txt(g, cx, top - 8, pct(b.accuracy, 0), {"text-anchor": "middle", class: "mono lbl-strong"});
+    const [yy, mm] = b.month.split("-");
+    txt(g, cx, f.H - 22, MONTHS[mm], {"text-anchor": "middle", class: "lbl"});
+    txt(g, cx, f.H - 7, b.games + "", {"text-anchor": "middle", class: "mono", style: "font-size:11px"});
+    hover(g, ev => showTip(ev, monthLabel(b.month), [["Accuracy", pct(b.accuracy)], ["Games", String(b.games)]]));
+  });
+}
+
+/* ---------- upsets ---------- */
+function buildUpsets() {
+  D.upsets.forEach(u => {
+    const homeWon = u.home_pts > u.away_pts;
+    const fav = u.p_home >= 0.5 ? u.home_team : u.away_team;
+    const rowFor = (team, pts, won, tag) => [h("span", {class: won ? "" : "loser", text: `${team}${tag}`}), h("span", {class: "pts " + (won ? "" : "loser"), text: String(pts)})];
+    const sc = h("div", {class: "score"}, ...rowFor(u.away_team, u.away_pts, !homeWon, ""), ...rowFor(u.home_team, u.home_pts, homeWon, " (home)"));
+    $("#upsets").append(h("div", {class: "upset"},
+      h("div", {class: "date", text: fmtDate(u.game_date)}), sc,
+      h("div", {class: "note", text: `Model gave ${fav} a ${pct(u.confidence, 0)} chance to win.`})));
+  });
+}
+
+/* ---------- explorer ---------- */
+const G = D.games;
+const teamNames = Object.fromEntries(D.by_team.map(t => [t.team, t.team_name]));
+let shown = 50, resFilter = "all";
+function buildExplorer() {
+  const ft = $("#f-team"); ft.append(h("option", {value: "", text: "All teams"}));
+  Object.keys(teamNames).sort().forEach(t => ft.append(h("option", {value: t, text: `${t} · ${teamNames[t]}`})));
+  const fm = $("#f-month"); fm.append(h("option", {value: "", text: "All months"}));
+  D.by_month.forEach(b => fm.append(h("option", {value: b.month, text: monthLabel(b.month)})));
+  const t = $("#t-games");
+  t.append(h("thead", {}, h("tr", {}, h("th", {text: "Date"}), h("th", {text: "Matchup"}), h("th", {class: "r", text: "Final"}), h("th", {text: "Model's pick"}), h("th", {text: "Result"}))));
+  t.append(h("tbody", {id: "g-body"}));
+  ft.addEventListener("change", () => { shown = 50; renderGames(); });
+  fm.addEventListener("change", () => { shown = 50; renderGames(); });
+  $("#f-res").addEventListener("click", ev => {
+    const b = ev.target.closest("button"); if (!b) return;
+    resFilter = b.dataset.v;
+    $("#f-res").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+    shown = 50; renderGames();
+  });
+  $("#x-more").addEventListener("click", () => { shown += 50; renderGames(); });
+  renderGames();
+}
+function renderGames() {
+  const team = $("#f-team").value, month = $("#f-month").value;
+  const rows = G.filter(g => (!team || g.home_team === team || g.away_team === team)
+    && (!month || g.game_date.slice(0, 7) === month)
+    && (resFilter === "all" || String(g.correct) === resFilter));
+  const base = G.filter(g => (!team || g.home_team === team || g.away_team === team) && (!month || g.game_date.slice(0, 7) === month));
+  const acc = base.length ? base.reduce((a, g) => a + g.correct, 0) / base.length : 0;
+  const sum = $("#x-sum"); sum.replaceChildren(
+    document.createTextNode("Accuracy for this selection: "), h("b", {text: base.length ? pct(acc) : "–"}),
+    document.createTextNode(` · ${base.reduce((a, g) => a + g.correct, 0)} of ${base.length} games`));
+  const body = $("#g-body"); body.replaceChildren();
+  rows.slice(0, shown).forEach(g => {
+    const pickHome = g.p_home >= 0.5, pick = pickHome ? g.home_team : g.away_team, p = pickHome ? g.p_home : 1 - g.p_home;
+    const homeWon = g.home_pts > g.away_pts;
+    const track = h("span", {class: "track"}), fill = h("span", {class: "fill"}); fill.style.width = (p * 100).toFixed(0) + "%"; track.append(fill);
+    const match = h("td", {}, h("span", {class: "team", text: g.away_team}), document.createTextNode("  @  "), h("span", {class: "team", text: g.home_team}));
+    body.append(h("tr", {},
+      h("td", {class: "num", text: fmtDate(g.game_date)}), match,
+      h("td", {class: "num r", text: `${g.away_pts}–${g.home_pts}`}),
+      h("td", {}, h("span", {class: "probbar"}, h("span", {class: "team", text: pick}), track, h("span", {class: "num", text: pct(p, 0)}))),
+      h("td", {}, g.correct ? h("span", {class: "chip ok", text: "✓ Correct"}) : h("span", {class: "chip miss", text: `✗ ${homeWon ? g.home_team : g.away_team} won`}))));
+  });
+  if (!rows.length) body.append(h("tr", {}, h("td", {colspan: "5", class: "muted", text: "No games match these filters."})));
+  $("#x-more").hidden = rows.length <= shown;
+  $("#x-more").textContent = `Show ${Math.min(50, rows.length - shown)} more of ${rows.length - shown} remaining`;
+}
+
+/* ---------- render ---------- */
+function drawAll() { drawBoard(); drawWalk(); drawConf(); drawCalib(); drawRest(); drawHome(); drawTeams(); drawMonth(); }
+buildBoardTable(); buildWalkLegend(); buildMonthNote(); buildAbl(); buildUpsets(); buildExplorer();
+drawAll();
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(drawAll, 120); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawAll);
+new MutationObserver(drawAll).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
+</script>

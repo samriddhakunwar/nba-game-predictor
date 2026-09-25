@@ -1,0 +1,26 @@
+feature,label,lr_coef_std,gb_perm_importance
+elo_diff,Elo rating gap,0.45526991782572135,0.0545159747575053
+diff_szn_win,Season win % gap,0.14649169933417652,0.0005095157737067368
+diff_szn_net_rtg,Season net rating gap,0.015891952455528945,0.005738979059937898
+diff_szn_ortg,Season offensive rating gap,0.004488086657917284,0.0004906677815180394
+diff_szn_drtg,Season defensive rating gap,-0.021826848078855512,0.0011232528247064999
+diff_szn_margin,Season point margin gap,0.001612976942754688,0.005761103582566174
+diff_szn_pace,Pace gap,-0.009020147894197385,0.0
+diff_szn_efg,Shooting (eFG%) gap,0.09542697581817892,0.00023850408304579851
+diff_szn_tov_pct,Turnover rate gap,-0.019484061890915463,0.0
+diff_szn_orb_pct,Off. rebounding gap,0.021548107331482824,0.0001227228400326297
+diff_szn_ft_rate,Free-throw rate gap,0.02740174648860075,-2.0190215166071556e-05
+diff_szn_opp_efg,Opp. shooting allowed gap,-0.06679283914467377,0.00027472994954834683
+diff_szn_opp_tov_pct,Forced turnovers gap,0.0677476139032449,-6.360288883023868e-05
+diff_szn_drb_pct,Def. rebounding gap,0.06331797957514591,-0.0001635132374146142
+diff_szn_opp_ft_rate,Opp. FT rate allowed gap,0.0050106465564572055,0.0
+diff_szn_fg3a_rate,3-point attempt rate gap,0.00989798069687852,-2.8351261547254757e-05
+diff_form_win,Last-10 win % gap,-0.12955424402977023,2.9598371568151373e-05
+diff_form_net_rtg,Last-10 net rating gap,0.08882626775787048,0.0017792187216628895
+diff_form_ortg,Last-10 offence gap,0.10349526591917459,0.0011971582482101617
+diff_form_drtg,Last-10 defence gap,-0.02063957554577718,3.4516097756753795e-05
+home_rest_days,Home rest days,0.011855387950418687,0.0011067736307133202
+away_rest_days,Away rest days,-0.003843394848220667,-0.0005321821709637131
+home_b2b,Home on back-to-back,-0.06473852113910261,0.0
+away_b2b,Away on back-to-back,0.12429290939231068,-9.868442015716905e-05
+diff_games_last7,Schedule density gap (games in 7 days),-0.05095668039128192,0.00020523410130729447
