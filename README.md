@@ -7,11 +7,13 @@ Predicts the winner of NBA regular-season games using only information available
 | Approach | Accuracy | Log loss | Brier | AUC |
 |---|---|---|---|---|
 | **Logistic regression (final model)** | **68.9%** | **0.595** | **0.204** | **0.741** |
-| Ensemble (LR + gradient boosting) | 68.9% | 0.596 | 0.205 | 0.740 |
-| Gradient boosting | 68.8% | 0.599 | 0.206 | 0.739 |
+| Ensemble (LR + gradient boosting) | 69.0% | 0.596 | 0.204 | 0.741 |
+| Gradient boosting | 68.5% | 0.597 | 0.205 | 0.740 |
 | Elo ratings only | 67.6% | 0.607 | 0.209 | 0.738 |
 | Better record wins | 67.3% | 0.633 | 0.221 | 0.675 |
 | Always pick the home team | 55.4% | 0.688 | 0.247 | n/a |
+
+Logistic regression (C = 0.03) is the final model because it had the best log loss on the 2024-25 validation season. On the test season the ensemble gets two more games right (849 vs 847), but its probabilities are no better, so the simpler model was kept.
 
 - When the model is **80%+ confident**, it is right **85.1%** of the time (201 games).
 - The model is well **calibrated**: when it gives a home team about 75%, the home team wins about 76% of the time.
@@ -38,7 +40,7 @@ The two sources were checked against each other on the overlapping 2023-24 seaso
 
 | Group | Features |
 |---|---|
-| Elo | Rating gap (K=20, margin-of-victory multiplier, 25% regression to the mean each summer) |
+| Elo | Rating gap (K=20, 100-point home advantage, margin-of-victory multiplier, 25% regression to the mean each summer) |
 | Season strength | Win %, net / offensive / defensive rating, point margin |
 | Four Factors & style | eFG%, turnover rate, offensive and defensive rebounding %, free-throw rate (for and against), pace, 3-point attempt rate |
 | Recent form | Last-10 win %, net, offensive and defensive rating |
